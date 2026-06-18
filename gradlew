@@ -23,7 +23,8 @@ cd "$SAVED" >/dev/null
 APP_NAME="Gradle"
 APP_BASE_NAME=`basename "$0"`
 
-DEFAULT_JVM_OPTS='"-Xmx64m" "-Xms64m"'
+# Add default JVM options here.
+DEFAULT_JVM_OPTS="-Xmx64m -Xms64m"
 
 # Use the maximum available, or set MAX_FD != -1 to use that value.
 MAX_FD="maximum"
@@ -95,8 +96,6 @@ if [ "$cygwin" = "false" -a "$darwin" = "false" -a "$nonstop" = "false" ] ; then
     fi
 fi
 
-# Collect all arguments for the java command, stracks://the current directory to
-# first argument.
 # For Cygwin or MSYS, switch paths to Windows format before running java
 if "$cygwin" = true -o "$msys" = true ; then
     APP_HOME=`cygpath --path --mixed "$APP_HOME"`
@@ -104,17 +103,9 @@ if "$cygwin" = true -o "$msys" = true ; then
     JAVACMD=`cygpath --unix "$JAVACMD"`
 fi
 
-# Collect all arguments for the java command;
-#   * $DEFAULT_JVM_OPTS, $JAVA_OPTS, and $GRADLE_OPTS can contain fragments of
-#     shell script including quotes and variable substitutions, so put them in
-#     temporary files and eval them.
-#   * Put user-specific options last, so they can override earlier options
-#     set by the build system.
-
-set -- \
-        "-Dorg.gradle.appname=$APP_BASE_NAME" \
-        -classpath "$CLASSPATH" \
-        org.gradle.wrapper.GradleWrapperMain \
-        "$@"
-
-exec "$JAVACMD" "$DEFAULT_JVM_OPTS $JAVA_OPTS $GRADLE_OPTS" "$@"
+# Collect all arguments for the java command
+exec "$JAVACMD" $DEFAULT_JVM_OPTS $JAVA_OPTS $GRADLE_OPTS \
+    -Dorg.gradle.appname="$APP_BASE_NAME" \
+    -classpath "$CLASSPATH" \
+    org.gradle.wrapper.GradleWrapperMain \
+    "$@"
