@@ -1,67 +1,109 @@
 package com.example.paddleocrapp.ocr
 
 import android.util.Log
-import paddle.lite.MobileConfig
-import paddle.lite.OpenclPrecision
-import paddle.lite.OpenclTune
-import paddle.lite.PaddlePredictor
-import paddle.lite.PowerMode
-import paddle.lite.Tensor
 
 /**
  * Paddle Lite 预测器封装类
  *
- * 封装 Paddle Lite Java API，提供统一的模型加载和推理接口。
+ * 通过 JNI 调用 Paddle Lite C++ API，提供统一的模型加载和推理接口。
  * 支持 CPU 和 OpenCL GPU 推理模式。
+ *
+ * 集成方式：
+ * 1. 下载 Paddle Lite 预编译库 (.so 文件)
+ *    https://github.com/PaddlePaddle/Paddle-Lite/releases
+ * 2. 将 libpaddle_light_api_shared.so 放入 app/libs/arm64-v8a/
+ * 3. 将 libocr_jni.so (由 CMake 编译生成) 放入 app/libs/arm64-v8a/
+ * 4. 在 app/build.gradle 中配置 jniLibs 来源目录
  *
  * 使用方式：
  * 1. 调用 loadModel() 加载 .nb 模型文件
- * 2. 调用 run() 执行推理，传入输入数据和形状
+ * 2. 调用 run() 执行推理
  * 3. 使用完毕后调用 release() 释放资源
  */
 class PaddleLitePredictor {
+
     companion object {
         private const val TAG = "PaddleLitePredictor"
+
+        init {
+            try {
+                System.loadLibrary("paddle_light_api_shared")
+                System.loadLibrary("ocr_jni")
+                Log.i(TAG, "Paddle Lite native libraries loaded")
+            } catch (e: UnsatisfiedLinkError) {
+                Log.w(TAG, "Paddle Lite native libraries not available: ${e.message}")
+                Log.w(TAG, "OCR engine will run in simulation mode")
+                Log.w(TAG, "To enable real OCR, download .so files to app/libs/arm64-v8a/")
+            }
+        }
     }
 
-    /** Paddle Lite 预测器实例 */
-    private var predictor: PaddlePredictor? = null
+    /** Native 预测器句柄 */
+    private var nativeHandle: Long = 0
 
     /** 模型是否已加载 */
     private var isLoaded = false
 
+    /** 是否有 native 库可用 */
+    private var hasNativeLib = false
+
+    init {
+        hasNativeLib = checkNativeAvailable()
+    }
+
+    /**
+     * 检查 native 库是否可用
+     */
+    private external fun checkNativeAvailable(): Boolean
+
+    /**
+     * Native: 创建预测器
+     */
+    private external fun nativeCreate(
+        modelPath: String,
+        threadNum: Int,
+        useOpenCL: Boolean
+    ): Long
+
+    /**
+     * Native: 执行推理
+     */
+    private external fun nativeRun(
+        handle: Long,
+        inputData: FloatArray,
+        shape: LongArray
+    ): FloatArray
+
+    /**
+     * Native: 获取输出形状
+     */
+    private external fun nativeGetOutputShape(handle: Long): LongArray
+
+    /**
+     * Native: 释放预测器
+     */
+    private external fun nativeRelease(handle: Long)
+
     /**
      * 加载 Paddle Lite 模型
      *
-     * @param modelPath 模型文件路径（.nb 格式，由 paddle_lite_opt 工具转换生成）
+     * @param modelPath 模型文件路径（.nb 格式）
      * @param threadNum CPU 推理线程数，默认为 4
-     * @param useOpenCL 是否使用 OpenCL GPU 加速，默认为 false（使用 CPU）
-     * @return 加载成功返回 true，失败返回 false
+     * @param useOpenCL 是否使用 OpenCL GPU 加速
+     * @return 加载成功返回 true
      */
     fun loadModel(modelPath: String, threadNum: Int = 4, useOpenCL: Boolean = false): Boolean {
+        if (!hasNativeLib) {
+            Log.w(TAG, "Native library not available, cannot load model")
+            return false
+        }
+
         return try {
-            Log.i(TAG, "Loading model from: $modelPath, threads=$threadNum, opencl=$useOpenCL")
-
-            val config = MobileConfig()
-            // 设置模型文件路径
-            config.setModelFromFile(modelPath)
-            // 设置 CPU 线程数
-            config.setThreads(threadNum)
-            // 设置功耗模式：高性能模式
-            config.setPowerMode(PowerMode.LITE_POWER_HIGH)
-
-            // OpenCL GPU 加速配置
-            if (useOpenCL) {
-                config.setOpenclTune(OpenclTune.CL_TUNE_NONE)
-                config.setOpenclPrecision(OpenclPrecision.CL_PRECISION_FP32)
-            }
-
-            // 创建预测器
-            predictor = PaddlePredictor.createPaddlePredictor(config)
-            isLoaded = predictor != null
-
+            Log.i(TAG, "Loading model: $modelPath, threads=$threadNum, opencl=$useOpenCL")
+            nativeHandle = nativeCreate(modelPath, threadNum, useOpenCL)
+            isLoaded = nativeHandle != 0L
             if (isLoaded) {
-                Log.i(TAG, "Model loaded successfully")
+                Log.i(TAG, "Model loaded successfully (handle=$nativeHandle)")
             } else {
                 Log.e(TAG, "Failed to create predictor")
             }
@@ -76,32 +118,17 @@ class PaddleLitePredictor {
     /**
      * 执行模型推理
      *
-     * @param inputData 输入数据（float 数组），数据格式为 NCHW
-     * @param shape 输入张量的形状，例如 longArrayOf(1, 3, 640, 640) 表示 batch=1, channel=3, h=640, w=640
-     * @return 推理输出的 float 数组，如果推理失败返回空数组
+     * @param inputData 输入数据（float 数组），NCHW 格式
+     * @param shape 输入张量形状，如 longArrayOf(1, 3, 640, 640)
+     * @return 推理输出数据
      */
     fun run(inputData: FloatArray, shape: LongArray): FloatArray {
-        val pred = predictor
-        if (pred == null) {
+        if (!isLoaded || nativeHandle == 0L) {
             Log.e(TAG, "Predictor not initialized")
             return floatArrayOf()
         }
-
         return try {
-            // 获取输入张量
-            val inputTensor: Tensor = pred.getInput(0)
-            // 设置输入张量形状
-            inputTensor.resize(shape)
-            // 设置输入数据
-            inputTensor.setData(inputData)
-
-            // 执行推理
-            pred.run()
-
-            // 获取输出张量
-            val outputTensor: Tensor = pred.getOutput(0)
-            // 返回输出数据
-            outputTensor.getFloatData()
+            nativeRun(nativeHandle, inputData, shape)
         } catch (e: Exception) {
             Log.e(TAG, "Inference failed", e)
             floatArrayOf()
@@ -110,67 +137,31 @@ class PaddleLitePredictor {
 
     /**
      * 获取输出张量的形状
-     *
-     * @return 输出张量的形状数组，如果预测器未初始化返回空数组
      */
     fun getOutputShape(): LongArray {
-        return predictor?.getOutput(0)?.shape() ?: longArrayOf()
-    }
-
-    /**
-     * 获取输入张量的形状
-     *
-     * @return 输入张量的形状数组，如果预测器未初始化返回空数组
-     */
-    fun getInputShape(): LongArray {
-        return predictor?.getInput(0)?.shape() ?: longArrayOf()
-    }
-
-    /**
-     * 获取指定索引的输出张量数据
-     *
-     * @param index 输出张量索引，默认为 0
-     * @return 输出张量的 float 数据数组
-     */
-    fun getOutputData(index: Int = 0): FloatArray {
-        return try {
-            predictor?.getOutput(index)?.getFloatData() ?: floatArrayOf()
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to get output at index $index", e)
-            floatArrayOf()
-        }
-    }
-
-    /**
-     * 获取指定索引的输出张量形状
-     *
-     * @param index 输出张量索引，默认为 0
-     * @return 输出张量的形状数组
-     */
-    fun getOutputShape(index: Int = 0): LongArray {
-        return try {
-            predictor?.getOutput(index)?.shape() ?: longArrayOf()
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to get output shape at index $index", e)
+        return if (nativeHandle != 0L) {
+            try { nativeGetOutputShape(nativeHandle) } catch (e: Exception) { longArrayOf() }
+        } else {
             longArrayOf()
         }
     }
 
     /**
      * 释放预测器资源
-     *
-     * 在不再使用时调用此方法释放 native 内存
      */
     fun release() {
-        predictor = null
+        if (nativeHandle != 0L) {
+            try {
+                nativeRelease(nativeHandle)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to release predictor", e)
+            }
+            nativeHandle = 0L
+        }
         isLoaded = false
-        Log.i(TAG, "Predictor released")
     }
 
-    /**
-     * 判断预测器是否已加载并可用
-     *
-     * @return 如果预测器已加载返回 true
-     */
-    fun isReady(): Boolean = isLoaded && predictor != null
+    fun isReady(): Boolean = isLoaded && nativeHandle != 0L
+
+    fun hasNativeLibrary(): Boolean = hasNativeLib
 }
