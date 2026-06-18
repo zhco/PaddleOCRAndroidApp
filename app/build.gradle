@@ -56,6 +56,10 @@ dependencies {
     implementation 'androidx.exifinterface:exifinterface:1.3.7'
     implementation 'androidx.cardview:cardview:1.0.0'
 
+    // Paddle Lite 推理引擎（用于 OCR 模型推理）
+    // 如果 Maven 仓库不可用，可将 AAR 文件放入 app/libs/ 目录并使用本地依赖方式
+    implementation 'com.baidu.paddle.lite:paddle-lite:2.10'
+
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
