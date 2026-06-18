@@ -3,8 +3,9 @@ package com.example.paddleocrapp.ocr
 import android.content.Context
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -169,12 +170,13 @@ class ModelDownloader(private val context: Context) {
      *
      * @return 下载进度 Flow
      */
-    fun downloadAllModels(): Flow<DownloadProgress> = flow {
+    fun downloadAllModels(): Flow<DownloadProgress> = callbackFlow {
         val missingModels = getMissingModels()
 
         if (missingModels.isEmpty()) {
             Log.i(TAG, "所有模型文件已存在，无需下载")
-            return@flow
+            close()
+            return@callbackFlow
         }
 
         Log.i(TAG, "开始下载 ${missingModels.size} 个模型文件...")
@@ -183,7 +185,7 @@ class ModelDownloader(private val context: Context) {
             Log.i(TAG, "下载文件 ${index + 1}/${missingModels.size}: ${modelInfo.description}")
 
             // 发送开始下载的进度
-            emit(DownloadProgress(
+            trySend(DownloadProgress(
                 fileName = modelInfo.fileName,
                 progress = 0,
                 downloadedBytes = 0,
@@ -192,11 +194,11 @@ class ModelDownloader(private val context: Context) {
 
             try {
                 downloadFile(modelInfo) { progress ->
-                    emit(progress)
+                    trySend(progress)
                 }
 
                 // 发送完成进度
-                emit(DownloadProgress(
+                trySend(DownloadProgress(
                     fileName = modelInfo.fileName,
                     progress = 100,
                     downloadedBytes = 0,
@@ -207,7 +209,7 @@ class ModelDownloader(private val context: Context) {
                 Log.i(TAG, "下载完成: ${modelInfo.description}")
             } catch (e: Exception) {
                 Log.e(TAG, "下载失败: ${modelInfo.description}", e)
-                emit(DownloadProgress(
+                trySend(DownloadProgress(
                     fileName = modelInfo.fileName,
                     progress = 0,
                     downloadedBytes = 0,
@@ -215,11 +217,14 @@ class ModelDownloader(private val context: Context) {
                     isError = true,
                     errorMessage = e.message ?: "下载失败"
                 ))
-                return@flow
+                close()
+                return@callbackFlow
             }
         }
 
         Log.i(TAG, "所有模型文件下载完成")
+        close()
+        awaitClose()
     }.flowOn(Dispatchers.IO)
 
     /**

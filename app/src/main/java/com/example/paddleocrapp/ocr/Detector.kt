@@ -316,7 +316,7 @@ class Detector(
             for (w in 0 until width) {
                 if (binaryMap[h][w] && !visited[h][w]) {
                     // BFS 查找连通区域
-                    val contour = mutableListOf<Pair<Int, Int>>>()
+                    val contour = mutableListOf<Pair<Int, Int>>()
                     val queue = ArrayDeque<Pair<Int, Int>>()
                     queue.add(Pair(w, h))
                     visited[h][w] = true
