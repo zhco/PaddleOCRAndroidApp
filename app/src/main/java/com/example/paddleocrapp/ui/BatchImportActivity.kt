@@ -7,6 +7,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
+import com.example.paddleocrapp.R
 import com.example.paddleocrapp.adapter.ImageGridAdapter
 import com.example.paddleocrapp.databinding.ActivityBatchImportBinding
 import com.example.paddleocrapp.model.ImageItem

@@ -9,9 +9,11 @@ import android.provider.OpenableColumns
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.lifecycleScope
 import com.example.paddleocrapp.model.ImageItem
 import com.example.paddleocrapp.model.SortMode
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
@@ -41,7 +43,7 @@ class ImagePicker(private val activity: FragmentActivity) {
                 }
 
                 // 异步处理图片信息
-                activity.lifecycleScope?.launchWhenStarted {
+                activity.lifecycleScope.launch {
                     val imageItems = processUris(imageUris)
                     onImagesPicked?.invoke(imageItems)
                 }
@@ -66,14 +68,14 @@ class ImagePicker(private val activity: FragmentActivity) {
      */
     private suspend fun processUris(uris: List<Uri>): List<ImageItem> = withContext(Dispatchers.IO) {
         uris.mapIndexedNotNull { index, uri ->
-            getImageItemFromUri(activity, uri, index.toLong())
+            getImageItemFromUri(activity, uri, index.toLong(), index)
         }
     }
 
     /**
      * 从 URI 获取图片详细信息
      */
-    private fun getImageItemFromUri(context: Context, uri: Uri, id: Long): ImageItem? {
+    private fun getImageItemFromUri(context: Context, uri: Uri, id: Long, index: Int): ImageItem? {
         return try {
             val projection = arrayOf(
                 MediaStore.Images.Media.DISPLAY_NAME,
@@ -136,7 +138,7 @@ class ImagePicker(private val activity: FragmentActivity) {
                 width = width,
                 height = height,
                 size = size,
-                order = index.toInt()
+                order = index
             )
         } catch (e: Exception) {
             e.printStackTrace()
@@ -157,9 +159,3 @@ class ImagePicker(private val activity: FragmentActivity) {
         }
     }
 }
-
-// Extension property for lifecycle scope
-private val FragmentActivity.lifecycleScope
-    get() = (this as? androidx.lifecycle.LifecycleOwner)?.lifecycle?.let {
-        androidx.lifecycle.lifecycleScope
-    }

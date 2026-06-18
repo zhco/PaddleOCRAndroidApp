@@ -3,6 +3,7 @@ package com.example.paddleocrapp.ui
 import android.os.Bundle
 import android.view.MenuItem
 import androidx.appcompat.app.AppCompatActivity
+import com.example.paddleocrapp.R
 import com.example.paddleocrapp.databinding.ActivitySettingsBinding
 
 /**

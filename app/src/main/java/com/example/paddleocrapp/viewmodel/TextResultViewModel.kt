@@ -5,7 +5,7 @@ import android.graphics.Bitmap
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.paddleocrapp.model.ImageItem
-import com.example.paddleocrapp.model.OCRResult
+import com.example.paddleocrapp.ocr.OCRResult
 import com.example.paddleocrapp.model.PageData
 import com.example.paddleocrapp.model.RecognitionState
 import com.example.paddleocrapp.ocr.OCRManager

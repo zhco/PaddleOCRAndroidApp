@@ -1,6 +1,8 @@
 package com.example.paddleocrapp.model
 
 import android.net.Uri
+import android.os.Parcel
+import android.os.Parcelable
 
 /**
  * 图片项数据类 - 包含图片元数据和识别结果
@@ -18,7 +20,7 @@ data class ImageItem(
     var recognizedText: String = "",  // 识别出的文字
     var isRecognized: Boolean = false,
     var order: Int = 0          // 排序顺序
-) : Comparable<ImageItem> {
+) : Comparable<ImageItem>, Parcelable {
 
     /**
      * 按拍摄时间排序（默认）
@@ -27,7 +29,49 @@ data class ImageItem(
         return this.dateTaken.compareTo(other.dateTaken)
     }
 
-    companion object {
+    constructor(parcel: Parcel) : this(
+        id = parcel.readLong(),
+        uri = parcel.readParcelable(Uri::class.java.classLoader)!!,
+        name = parcel.readString()!!,
+        path = parcel.readString()!!,
+        dateTaken = parcel.readLong(),
+        dateModified = parcel.readLong(),
+        width = parcel.readInt(),
+        height = parcel.readInt(),
+        size = parcel.readLong(),
+        recognizedText = parcel.readString() ?: "",
+        isRecognized = parcel.readByte() != 0.toByte(),
+        order = parcel.readInt()
+    )
+
+    override fun writeToParcel(parcel: Parcel, flags: Int) {
+        parcel.writeLong(id)
+        parcel.writeParcelable(uri, flags)
+        parcel.writeString(name)
+        parcel.writeString(path)
+        parcel.writeLong(dateTaken)
+        parcel.writeLong(dateModified)
+        parcel.writeInt(width)
+        parcel.writeInt(height)
+        parcel.writeLong(size)
+        parcel.writeString(recognizedText)
+        parcel.writeByte(if (isRecognized) 1 else 0)
+        parcel.writeInt(order)
+    }
+
+    override fun describeContents(): Int {
+        return 0
+    }
+
+    companion object CREATOR : Parcelable.Creator<ImageItem> {
+        override fun createFromParcel(parcel: Parcel): ImageItem {
+            return ImageItem(parcel)
+        }
+
+        override fun newArray(size: Int): Array<ImageItem?> {
+            return arrayOfNulls(size)
+        }
+
         /**
          * 按拍摄时间排序
          */
