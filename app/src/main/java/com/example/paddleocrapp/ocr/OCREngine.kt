@@ -58,7 +58,7 @@ class OCREngine(private val config: OCRConfig) : OCRManager.OCREngineInterface {
      *
      * @return 初始化成功返回 true，失败返回 false
      */
-    fun initialize(): Boolean {
+    override fun initialize(): Boolean {
         Log.i(TAG, "开始初始化 OCR 引擎...")
 
         // 第一步：加载字典文件
@@ -391,7 +391,7 @@ class OCREngine(private val config: OCRConfig) : OCRManager.OCREngineInterface {
      *
      * 释放检测模型、识别模型和分类模型的预测器资源
      */
-    fun release() {
+    override fun release() {
         Log.i(TAG, "释放 OCR 引擎资源")
 
         detector = null

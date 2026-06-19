@@ -27,7 +27,7 @@ class TesseractEngine(private val context: Context) : OCRManager.OCREngineInterf
     /**
      * 初始化 Tesseract 引擎
      */
-    fun initialize(): Boolean {
+    override fun initialize(): Boolean {
         return try {
             // 确保 tessdata 目录存在
             val tessDir = File(context.filesDir, TESSDATA_DIR)
@@ -59,7 +59,7 @@ class TesseractEngine(private val context: Context) : OCRManager.OCREngineInterf
     /**
      * 识别图片中的文字
      */
-    fun recognize(bitmap: Bitmap): OCRResult {
+    override fun recognize(bitmap: Bitmap): OCRResult {
         if (!isInitialized || tessApi == null) {
             return OCRResult.error("Tesseract 未初始化")
         }
@@ -86,7 +86,7 @@ class TesseractEngine(private val context: Context) : OCRManager.OCREngineInterf
     /**
      * 释放资源
      */
-    fun release() {
+    override fun release() {
         try {
             tessApi?.end()
             tessApi = null
