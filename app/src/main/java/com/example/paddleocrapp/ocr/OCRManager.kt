@@ -12,7 +12,7 @@ import java.io.FileOutputStream
  * OCR 管理器 - 负责引擎初始化和图片识别
  *
  * 优先使用 Paddle Lite 引擎（如果 .so 可用），
- * 否则降级使用 Tesseract OCR 引擎。
+ * 否则降级使用 Google ML Kit 引擎。
  */
 class OCRManager(private val context: Context) {
 
@@ -61,7 +61,7 @@ class OCRManager(private val context: Context) {
                     return@withContext true
                 }
                 paddleEngine?.release()
-                Log.w(TAG, "Paddle Lite 引擎初始化失败，降级到 Tesseract")
+                Log.w(TAG, "Paddle Lite 引擎初始化失败，降级到 ML Kit")
             }
 
             // 方案2: 使用 ML Kit 引擎

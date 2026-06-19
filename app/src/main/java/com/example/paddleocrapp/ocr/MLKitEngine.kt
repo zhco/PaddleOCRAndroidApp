@@ -3,8 +3,8 @@ package com.example.paddleocrapp.ocr
 import android.graphics.Bitmap
 import android.util.Log
 import com.google.mlkit.vision.common.InputImage
-import com.google.mlkit.vision.text.TextRecognizer
-import com.google.mlkit.vision.text.chinese.ChineseTextRecognizer
+import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.concurrent.CountDownLatch
@@ -23,12 +23,14 @@ class MLKitEngine : OCRManager.OCREngineInterface {
         private const val TAG = "MLKitEngine"
     }
 
-    private var textRecognizer: TextRecognizer? = null
+    private var textRecognizer: com.google.mlkit.vision.text.TextRecognizer? = null
     private var isInitialized = false
 
     override fun initialize(): Boolean {
         return try {
-            textRecognizer = ChineseTextRecognizer.getClient()
+            textRecognizer = TextRecognition.getClient(
+                ChineseTextRecognizerOptions.Builder().build()
+            )
             isInitialized = true
             Log.i(TAG, "ML Kit 中文识别引擎初始化成功")
             true
