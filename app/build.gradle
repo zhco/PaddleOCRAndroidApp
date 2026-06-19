@@ -63,8 +63,10 @@ dependencies {
     implementation 'androidx.exifinterface:exifinterface:1.3.7'
     implementation 'androidx.cardview:cardview:1.0.0'
 
-    // Tesseract OCR (JitPack)
-    implementation 'com.github.adaptech-cz:Tesseract4Android:4.7.0'
+    // Tesseract OCR (JitPack) - 只使用 standard 版本，排除 openmp
+    implementation('com.github.adaptech-cz:Tesseract4Android:4.7.0') {
+        exclude group: 'com.github.adaptech-cz.Tesseract4Android', module: 'tesseract4android-openmp'
+    }
 
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
