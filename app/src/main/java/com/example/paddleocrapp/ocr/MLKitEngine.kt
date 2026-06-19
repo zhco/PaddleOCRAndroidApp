@@ -3,16 +3,19 @@ package com.example.paddleocrapp.ocr
 import android.graphics.Bitmap
 import android.util.Log
 import com.google.mlkit.vision.common.InputImage
-import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.TextRecognizer
-import com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlin.coroutines.resume
+import com.google.mlkit.vision.text.chinese.ChineseTextRecognizer
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Google ML Kit OCR 引擎
  *
  * 使用 ML Kit 中文文字识别，支持中英文混合识别。
+ * 无需额外下载模型，开箱即用。
  */
 class MLKitEngine : OCRManager.OCREngineInterface {
 
@@ -25,8 +28,7 @@ class MLKitEngine : OCRManager.OCREngineInterface {
 
     override fun initialize(): Boolean {
         return try {
-            val options = ChineseTextRecognizerOptions.Builder().build()
-            textRecognizer = TextRecognition.getClient(options)
+            textRecognizer = ChineseTextRecognizer.getClient()
             isInitialized = true
             Log.i(TAG, "ML Kit 中文识别引擎初始化成功")
             true
@@ -43,7 +45,31 @@ class MLKitEngine : OCRManager.OCREngineInterface {
 
         return try {
             val image = InputImage.fromBitmap(bitmap, 0)
-            val visionText = textRecognizer!!.process(image).get()
+            val resultRef = AtomicReference<com.google.mlkit.vision.text.Text>(null)
+            val errorRef = AtomicReference<Exception>(null)
+            val latch = CountDownLatch(1)
+
+            textRecognizer!!.process(image)
+                .addOnSuccessListener { text ->
+                    resultRef.set(text)
+                    latch.countDown()
+                }
+                .addOnFailureListener { e ->
+                    errorRef.set(e)
+                    latch.countDown()
+                }
+
+            latch.await(30, TimeUnit.SECONDS)
+
+            val error = errorRef.get()
+            if (error != null) {
+                return OCRResult.error("识别失败: ${error.message}")
+            }
+
+            val visionText = resultRef.get()
+            if (visionText == null) {
+                return OCRResult.error("识别超时")
+            }
 
             val lines = mutableListOf<String>()
             for (block in visionText.textBlocks) {
