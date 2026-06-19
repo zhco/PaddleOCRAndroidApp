@@ -63,8 +63,8 @@ dependencies {
     implementation 'androidx.exifinterface:exifinterface:1.3.7'
     implementation 'androidx.cardview:cardview:1.0.0'
 
-    // Tesseract OCR (Maven 可用的 OCR 引擎)
-    implementation 'cz.adaptech:tesseract4android:4.1.0'
+    // Tesseract OCR (JitPack)
+    implementation 'com.github.adaptech-cz:Tesseract4Android:4.7.0'
 
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
