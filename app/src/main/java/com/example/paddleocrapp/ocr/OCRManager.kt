@@ -22,7 +22,7 @@ class OCRManager(private val context: Context) {
     }
 
     /** OCR 引擎接口 */
-    private interface OCREngineInterface {
+    interface OCREngineInterface {
         fun initialize(): Boolean
         fun recognize(bitmap: Bitmap): OCRResult
         fun release()
