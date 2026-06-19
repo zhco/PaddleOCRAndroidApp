@@ -11,14 +11,10 @@ android {
         applicationId "com.example.paddleocrapp"
         minSdk 24
         targetSdk 34
-        versionCode 4
+        versionCode 5
         versionName "2.0.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-
-        ndk {
-            abiFilters 'arm64-v8a', 'armeabi-v7a'
-        }
     }
 
     buildTypes {
@@ -42,15 +38,7 @@ android {
         viewBinding true
     }
 
-    // CMake native build configuration
-    externalNativeBuild {
-        cmake {
-            path "src/main/cpp/CMakeLists.txt"
-            version "3.22.1"
-        }
-    }
-
-    // JNI libraries source directory
+    // JNI libraries source directory (for Paddle Lite .so)
     sourceSets {
         main {
             jniLibs.srcDirs = ['src/main/jniLibs']
@@ -74,6 +62,9 @@ dependencies {
     implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.7.0'
     implementation 'androidx.exifinterface:exifinterface:1.3.7'
     implementation 'androidx.cardview:cardview:1.0.0'
+
+    // Tesseract OCR (Maven 可用的 OCR 引擎)
+    implementation 'cz.adaptech:tesseract4android:4.1.0'
 
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'

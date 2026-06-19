@@ -21,7 +21,7 @@ import java.io.FileReader
  * 3. 调用 recognize() 对图像执行 OCR 识别
  * 4. 使用完毕后调用 release() 释放资源
  */
-class OCREngine(private val config: OCRConfig) {
+class OCREngine(private val config: OCRConfig) : OCRManager.OCREngineInterface {
     companion object {
         private const val TAG = "OCREngine"
     }
