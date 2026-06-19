@@ -64,21 +64,21 @@ class OCRManager(private val context: Context) {
                 Log.w(TAG, "Paddle Lite 引擎初始化失败，降级到 Tesseract")
             }
 
-            // 方案2: 使用 Tesseract 引擎
-            Log.i(TAG, "使用 Tesseract 引擎...")
-            val tesseractEngine = TesseractEngine(context)
-            if (tesseractEngine.initialize()) {
-                engine = tesseractEngine
-                engineName = "Tesseract OCR"
+            // 方案2: 使用 ML Kit 引擎
+            Log.i(TAG, "使用 Google ML Kit 引擎...")
+            val mlKitEngine = MLKitEngine()
+            if (mlKitEngine.initialize()) {
+                engine = mlKitEngine
+                engineName = "Google ML Kit"
                 isInitialized = true
                 initErrorMessage = null
-                Log.i(TAG, "Tesseract 引擎初始化成功")
+                Log.i(TAG, "ML Kit 引擎初始化成功")
                 return@withContext true
             } else {
-                tesseractEngine.release()
+                mlKitEngine.release()
             }
 
-            initErrorMessage = "OCR 引擎初始化失败。\n\n请确保设备已连接网络，首次使用需要下载语言数据包。\n如果问题持续，请重启应用重试。"
+            initErrorMessage = "OCR 引擎初始化失败。\n\n请检查网络连接后重试。"
             Log.e(TAG, "所有 OCR 引擎初始化失败")
             false
         } catch (e: Exception) {

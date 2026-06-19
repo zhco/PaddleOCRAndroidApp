@@ -136,7 +136,7 @@ class OCREngine(private val config: OCRConfig) : OCRManager.OCREngineInterface {
      * @param bitmap 输入图像
      * @return OCR 识别结果，包含文本内容、置信度和文本框位置
      */
-    fun recognize(bitmap: Bitmap): OCRResult {
+    override fun recognize(bitmap: Bitmap): OCRResult {
         if (!isInitialized) {
             return OCRResult.error("OCR 引擎未初始化")
         }
