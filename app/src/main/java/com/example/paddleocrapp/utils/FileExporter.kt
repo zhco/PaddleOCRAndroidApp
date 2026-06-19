@@ -26,52 +26,75 @@ object FileExporter {
     private const val MIME_TYPE_TEXT = "text/plain"
 
     /**
-     * 导出识别结果为文本文件
+     * 导出识别结果为文本文件（合并所有页面）
+     *
+     * @param context 上下文
+     * @param pages 识别结果页面列表
+     * @param includePageHeader 是否在每页前添加页码标题
+     * @return 保存文件的 Uri，失败返回 null
      */
-    suspend fun exportToText(context: Context, pages: List<PageData>): Uri? =
-        withContext(Dispatchers.IO) {
-            try {
-                val content = buildString {
-                    appendLine("PaddleOCR 识别结果")
-                    appendLine("导出时间: ${getCurrentTime()}")
-                    appendLine("共 ${pages.size} 页")
-                    appendLine("=".repeat(50))
-                    appendLine()
+    suspend fun exportToText(
+        context: Context,
+        pages: List<PageData>,
+        includePageHeader: Boolean = true
+    ): Uri? = withContext(Dispatchers.IO) {
+        try {
+            val content = buildMergedText(pages, includePageHeader)
+            val fileName = "OCR_Result_${getTimestamp()}.txt"
+            saveTextFile(context, fileName, content)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
 
-                    pages.forEach { page ->
-                        appendLine(page.getFormattedPageNumber())
-                        appendLine("-".repeat(30))
-                        appendLine(page.textContent)
-                        appendLine()
-                    }
+    /**
+     * 导出识别结果为纯文本（无页码标题，适合直接阅读）
+     */
+    suspend fun exportToPlainText(context: Context, pages: List<PageData>): Uri? =
+        exportToText(context, pages, includePageHeader = false)
+
+    /**
+     * 构建合并后的文本内容
+     */
+    private fun buildMergedText(pages: List<PageData>, includePageHeader: Boolean): String {
+        return buildString {
+            // 文件头信息
+            appendLine("=".repeat(50))
+            appendLine("PaddleOCR 文字识别结果")
+            appendLine("导出时间: ${getCurrentTime()}")
+            appendLine("共 ${pages.size} 页")
+            appendLine("=".repeat(50))
+            appendLine()
+
+            pages.forEachIndexed { index, page ->
+                if (includePageHeader) {
+                    appendLine("【${page.getFormattedPageNumber()}】")
+                    appendLine("-".repeat(30))
                 }
 
-                val fileName = "OCR_Result_${getTimestamp()}.txt"
-
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    // Android 10+ 使用 MediaStore
-                    saveToMediaStore(context, fileName, content)
+                val text = page.textContent.trim()
+                if (text.isNotEmpty()) {
+                    appendLine(text)
+                } else if (page.errorMessage != null) {
+                    appendLine("[识别失败: ${page.errorMessage}]")
                 } else {
-                    // Android 9 及以下使用传统方式
-                    saveToExternalStorage(context, fileName, content)
+                    appendLine("[未识别到文字]")
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                null
+
+                // 页面之间空一行（最后一页不加）
+                if (index < pages.size - 1) {
+                    appendLine()
+                }
             }
         }
+    }
 
     /**
      * 分享识别结果
      */
     fun shareText(context: Context, pages: List<PageData>) {
-        val content = buildString {
-            pages.forEach { page ->
-                appendLine(page.getFormattedPageNumber())
-                appendLine(page.textContent)
-                appendLine()
-            }
-        }
+        val content = buildMergedText(pages, includePageHeader = true)
 
         val shareIntent = Intent(Intent.ACTION_SEND).apply {
             type = MIME_TYPE_TEXT
@@ -93,6 +116,25 @@ object FileExporter {
     }
 
     /**
+     * 复制所有页面的文字到剪贴板
+     */
+    fun copyAllToClipboard(context: Context, pages: List<PageData>) {
+        val content = buildMergedText(pages, includePageHeader = true)
+        copyToClipboard(context, content)
+    }
+
+    /**
+     * 保存文本文件（自动适配 Android 版本）
+     */
+    private fun saveTextFile(context: Context, fileName: String, content: String): Uri? {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            saveToMediaStore(context, fileName, content)
+        } else {
+            saveToExternalStorage(context, fileName, content)
+        }
+    }
+
+    /**
      * 保存到 MediaStore (Android 10+)
      */
     private fun saveToMediaStore(context: Context, fileName: String, content: String): Uri? {
@@ -105,7 +147,7 @@ object FileExporter {
         val uri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
         uri?.let {
             context.contentResolver.openOutputStream(it)?.use { outputStream ->
-                OutputStreamWriter(outputStream).use { writer ->
+                OutputStreamWriter(outputStream, Charsets.UTF_8).use { writer ->
                     writer.write(content)
                 }
             }
@@ -120,7 +162,7 @@ object FileExporter {
         val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
         val file = File(downloadsDir, fileName)
 
-        FileWriter(file).use { writer ->
+        FileWriter(file, Charsets.UTF_8).use { writer ->
             writer.write(content)
         }
 

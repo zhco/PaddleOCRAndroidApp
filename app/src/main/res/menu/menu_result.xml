@@ -9,6 +9,11 @@
         app:showAsAction="ifRoom" />
 
     <item
+        android:id="@+id/action_save_plain"
+        android:title="@string/save_plain_text"
+        app:showAsAction="never" />
+
+    <item
         android:id="@+id/action_share"
         android:title="@string/share_result"
         app:showAsAction="never" />

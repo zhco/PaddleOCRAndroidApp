@@ -160,7 +160,11 @@ class TextResultActivity : AppCompatActivity() {
                 true
             }
             R.id.action_save -> {
-                saveResult()
+                saveResult(withPageHeader = true)
+                true
+            }
+            R.id.action_save_plain -> {
+                saveResult(withPageHeader = false)
                 true
             }
             R.id.action_share -> {
@@ -175,12 +179,13 @@ class TextResultActivity : AppCompatActivity() {
         }
     }
 
-    private fun saveResult() {
+    private fun saveResult(withPageHeader: Boolean) {
         if (currentPages.isEmpty()) return
         lifecycleScope.launch {
-            val uri = FileExporter.exportToText(this@TextResultActivity, currentPages)
+            val uri = FileExporter.exportToText(this@TextResultActivity, currentPages, withPageHeader)
             if (uri != null) {
-                Toast.makeText(this@TextResultActivity, "已保存到下载文件夹", Toast.LENGTH_SHORT).show()
+                val msg = if (withPageHeader) "已保存到下载文件夹（含页码）" else "已保存到下载文件夹（纯文本）"
+                Toast.makeText(this@TextResultActivity, msg, Toast.LENGTH_SHORT).show()
             } else {
                 Toast.makeText(this@TextResultActivity, "保存失败", Toast.LENGTH_SHORT).show()
             }
@@ -194,10 +199,7 @@ class TextResultActivity : AppCompatActivity() {
 
     private fun copyAllText() {
         if (currentPages.isEmpty()) return
-        val allText = currentPages.joinToString("\n\n") { page ->
-            "${page.getFormattedPageNumber()}\n${page.textContent}"
-        }
-        FileExporter.copyToClipboard(this, allText)
+        FileExporter.copyAllToClipboard(this, currentPages)
         Toast.makeText(this, "已复制全部文字", Toast.LENGTH_SHORT).show()
     }
 }

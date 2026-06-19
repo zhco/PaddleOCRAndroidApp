@@ -13,9 +13,10 @@
     <string name="sort_by_name">按文件名排序</string>
     <string name="page_format">第 %1$d 页</string>
     <string name="total_pages">共 %1$d 页</string>
-    <string name="save_result">保存结果</string>
+    <string name="save_result">保存为文本</string>
+    <string name="save_plain_text">保存为纯文本（无页码）</string>
     <string name="share_result">分享</string>
-    <string name="copy_text">复制文字</string>
+    <string name="copy_text">复制全部文字</string>
     <string name="model_loading">正在加载模型...</string>
     <string name="model_load_failed">模型加载失败</string>
     <string name="permission_required">需要权限</string>
