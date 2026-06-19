@@ -13,13 +13,23 @@ file(GLOB NATIVE_SRCS ${CMAKE_SOURCE_DIR}/*.cpp)
 # Create shared library
 add_library(ocr_jni SHARED ${NATIVE_SRCS})
 
-# Find libraries
+# Add Paddle Lite prebuilt shared library
+# The .so is bundled in jniLibs and loaded at runtime by System.loadLibrary
+# But we need to link against it at build time so our JNI code can reference
+# Paddle Lite C++ symbols.
+add_library(paddle_light_api_shared SHARED IMPORTED)
+set_target_properties(paddle_light_api_shared PROPERTIES
+    IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/../jniLibs/${ANDROID_ABI}/libpaddle_light_api_shared.so
+)
+
+# Find system libraries
 find_library(log-lib log)
 find_library(android-lib android)
 
-# Link only Android log library
-# Paddle Lite .so is loaded at runtime via System.loadLibrary, not linked at compile time
+# Link libraries
+# paddle_light_api_shared must be linked so ocr_jni.so has the symbols resolved.
 target_link_libraries(ocr_jni
+    paddle_light_api_shared
     ${log-lib}
     ${android-lib}
 )
