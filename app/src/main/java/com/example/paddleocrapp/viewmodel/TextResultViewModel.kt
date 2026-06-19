@@ -19,12 +19,6 @@ import kotlinx.coroutines.withContext
 
 /**
  * 识别结果界面 ViewModel
- *
- * 负责管理 OCR 识别的生命周期，包括：
- * - 模型初始化
- * - 批量图片识别
- * - 识别进度管理
- * - 资源释放
  */
 class TextResultViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -35,8 +29,6 @@ class TextResultViewModel(application: Application) : AndroidViewModel(applicati
 
     /**
      * 开始批量识别
-     *
-     * @param images 待识别的图片列表
      */
     fun startRecognition(images: List<ImageItem>) {
         viewModelScope.launch {
@@ -45,7 +37,8 @@ class TextResultViewModel(application: Application) : AndroidViewModel(applicati
             // 初始化 OCR
             val initialized = ocrManager.initialize()
             if (!initialized) {
-                _recognitionState.value = RecognitionState.Error("OCR 模型初始化失败")
+                val errorMsg = ocrManager.initErrorMessage ?: "OCR 模型初始化失败，请检查模型文件和推理库是否已安装。"
+                _recognitionState.value = RecognitionState.Error(errorMsg)
                 return@launch
             }
 
@@ -65,10 +58,6 @@ class TextResultViewModel(application: Application) : AndroidViewModel(applicati
 
     /**
      * 处理单张图片
-     *
-     * @param imageItem 图片信息
-     * @param pageNumber 页码
-     * @return 页面数据（包含识别文本或错误信息）
      */
     private suspend fun processImage(imageItem: ImageItem, pageNumber: Int): PageData {
         return try {
@@ -86,14 +75,12 @@ class TextResultViewModel(application: Application) : AndroidViewModel(applicati
 
             val result = ocrManager.recognize(bitmap)
 
-            // 使用新的 OCRResult 数据类提取文本
             val text = when {
                 result.isSuccess() -> result.text
                 result.isError() -> "识别失败: ${result.text}"
                 else -> ""
             }
 
-            // 释放 bitmap
             bitmap.recycle()
 
             PageData(

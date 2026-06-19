@@ -11,18 +11,6 @@ import java.io.FileOutputStream
 
 /**
  * OCR 管理器 - 负责模型加载、下载和图片识别
- *
- * 作为 OCR 引擎的高层封装，提供以下功能：
- * - 模型文件管理（从 assets 复制或从网络下载）
- * - OCR 引擎初始化和生命周期管理
- * - 图片识别接口（单张和批量）
- * - 下载进度回调
- *
- * 使用方式：
- * 1. 创建 OCRManager 实例
- * 2. 调用 initialize() 初始化（自动处理模型文件）
- * 3. 调用 recognize() 识别图片
- * 4. 使用完毕后调用 release() 释放资源
  */
 class OCRManager(private val context: Context) {
 
@@ -39,25 +27,28 @@ class OCRManager(private val context: Context) {
     private var ocrEngine: OCREngine? = null
 
     /** 模型下载管理器 */
-    private val modelDownloader = ModelDownloader(context)
+    private var modelDownloader: ModelDownloader? = null
 
     /** 引擎是否已初始化 */
     private var isInitialized = false
 
+    /** 初始化失败的原因 */
+    var initErrorMessage: String? = null
+        private set
+
     /**
      * 初始化 OCR 引擎
-     *
-     * 初始化流程：
-     * 1. 首先尝试从 assets 目录复制模型文件到私有目录
-     * 2. 如果 assets 中没有，检查是否已下载
-     * 3. 构建 OCRConfig 配置
-     * 4. 创建并初始化 OCREngine
-     *
-     * @return 初始化成功返回 true
      */
     suspend fun initialize(): Boolean = withContext(Dispatchers.IO) {
         try {
             Log.i(TAG, "开始初始化 OCR 管理器...")
+
+            // 检查 native 库是否可用
+            if (!PaddleLitePredictor.isNativeLibAvailable()) {
+                initErrorMessage = "OCR 推理库未安装。\n\n请在设置中下载 OCR 模型和推理库，或联系开发者获取安装包。"
+                Log.w(TAG, "Native library not available, OCR engine cannot initialize")
+                return@withContext false
+            }
 
             // 第一步：确保模型文件可用
             ensureModelFiles()
@@ -72,55 +63,24 @@ class OCRManager(private val context: Context) {
             if (success) {
                 ocrEngine = engine
                 isInitialized = true
+                initErrorMessage = null
                 Log.i(TAG, "OCR 管理器初始化成功")
             } else {
+                initErrorMessage = "OCR 模型加载失败，请检查模型文件是否完整。"
                 Log.e(TAG, "OCR 引擎初始化失败")
                 engine.release()
             }
 
             isInitialized
         } catch (e: Exception) {
+            initErrorMessage = "OCR 初始化异常: ${e.message}"
             Log.e(TAG, "OCR 管理器初始化异常", e)
             false
         }
     }
 
     /**
-     * 使用自定义配置初始化 OCR 引擎
-     *
-     * @param config 自定义 OCR 配置
-     * @return 初始化成功返回 true
-     */
-    suspend fun initializeWithConfig(config: OCRConfig): Boolean = withContext(Dispatchers.IO) {
-        try {
-            Log.i(TAG, "使用自定义配置初始化 OCR 引擎...")
-
-            val engine = OCREngine(config)
-            val success = engine.initialize()
-
-            if (success) {
-                // 释放旧引擎
-                ocrEngine?.release()
-                ocrEngine = engine
-                isInitialized = true
-                Log.i(TAG, "OCR 引擎初始化成功（自定义配置）")
-            } else {
-                Log.e(TAG, "OCR 引擎初始化失败（自定义配置）")
-                engine.release()
-            }
-
-            isInitialized
-        } catch (e: Exception) {
-            Log.e(TAG, "OCR 引擎初始化异常", e)
-            false
-        }
-    }
-
-    /**
      * 识别单张图片
-     *
-     * @param bitmap 输入图像
-     * @return OCR 识别结果
      */
     suspend fun recognize(bitmap: Bitmap): OCRResult = withContext(Dispatchers.Default) {
         if (!isInitialized || ocrEngine == null) {
@@ -137,9 +97,6 @@ class OCRManager(private val context: Context) {
 
     /**
      * 批量识别图片
-     *
-     * @param bitmaps 图片列表
-     * @return 识别结果列表
      */
     suspend fun recognizeBatch(bitmaps: List<Bitmap>): List<OCRResult> =
         withContext(Dispatchers.Default) {
@@ -161,46 +118,22 @@ class OCRManager(private val context: Context) {
 
     /**
      * 获取模型下载进度 Flow
-     *
-     * @return 下载进度 Flow，可用于 UI 展示下载进度
      */
     fun getDownloadProgressFlow(): Flow<ModelDownloader.DownloadProgress> {
-        return modelDownloader.downloadAllModels()
+        if (modelDownloader == null) {
+            modelDownloader = ModelDownloader(context)
+        }
+        return modelDownloader!!.downloadAllModels()
     }
 
     /**
      * 检查模型文件是否已全部就绪
-     *
-     * @return 模型文件全部存在返回 true
      */
     fun isModelsReady(): Boolean {
-        return modelDownloader.areAllModelsExist()
-    }
-
-    /**
-     * 获取缺失的模型文件列表
-     *
-     * @return 缺失的模型文件信息列表
-     */
-    fun getMissingModels(): List<ModelDownloader.ModelFileInfo> {
-        return modelDownloader.getMissingModels()
-    }
-
-    /**
-     * 获取已下载模型的总大小
-     *
-     * @return 总字节数
-     */
-    fun getTotalModelsSize(): Long {
-        return modelDownloader.getTotalModelsSize()
-    }
-
-    /**
-     * 删除所有已下载的模型文件
-     */
-    fun deleteAllModels() {
-        modelDownloader.deleteAllModels()
-        release()
+        if (modelDownloader == null) {
+            modelDownloader = ModelDownloader(context)
+        }
+        return modelDownloader!!.areAllModelsExist()
     }
 
     fun isReady(): Boolean = isInitialized
@@ -209,8 +142,6 @@ class OCRManager(private val context: Context) {
 
     /**
      * 确保模型文件可用
-     *
-     * 优先从 assets 目录复制，如果 assets 中没有则检查是否已通过下载获取。
      */
     private fun ensureModelFiles() {
         val modelDir = File(context.filesDir, MODEL_DIR)
@@ -219,21 +150,12 @@ class OCRManager(private val context: Context) {
         }
 
         val modelFiles = listOf(DET_MODEL, REC_MODEL, CLS_MODEL, LABEL_FILE)
-        var allExist = true
 
         for (filename in modelFiles) {
             val destFile = File(modelDir, filename)
             if (!destFile.exists() || destFile.length() == 0L) {
-                allExist = false
-                // 尝试从 assets 复制
                 copyAssetFile("models/$filename", destFile)
             }
-        }
-
-        if (allExist) {
-            Log.i(TAG, "所有模型文件已就绪")
-        } else {
-            Log.w(TAG, "部分模型文件缺失，请通过 ModelDownloader 下载")
         }
     }
 

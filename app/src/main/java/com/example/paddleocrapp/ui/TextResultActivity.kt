@@ -121,7 +121,12 @@ class TextResultActivity : AppCompatActivity() {
                         }
                         is com.example.paddleocrapp.model.RecognitionState.Error -> {
                             showLoading(false)
-                            Toast.makeText(this@TextResultActivity, state.message, Toast.LENGTH_LONG).show()
+                            MaterialAlertDialogBuilder(this@TextResultActivity)
+                                .setTitle("识别失败")
+                                .setMessage(state.message)
+                                .setPositiveButton("确定") { _, _ -> finish() }
+                                .setCancelable(false)
+                                .show()
                         }
                     }
                 }
