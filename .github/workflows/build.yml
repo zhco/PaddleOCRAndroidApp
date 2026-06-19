@@ -28,6 +28,18 @@ jobs:
         run: |
           sdkmanager --install "ndk;21.4.7075529" "cmake;3.22.1"
 
+      - name: Generate signing keystore
+        run: |
+          keytool -genkey -v \
+            -keystore release.keystore \
+            -alias androidreleasekey \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass android \
+            -keypass android \
+            -dname "CN=PaddleOCRApp"
+
       - name: Cache Gradle packages
         uses: actions/cache@v4
         with:
@@ -51,10 +63,15 @@ jobs:
           path: app/build/outputs/apk/debug/app-debug.apk
 
       - name: Build Release APK
+        env:
+          KEYSTORE_PATH: ${{ github.workspace }}/release.keystore
+          KEYSTORE_PASSWORD: android
+          KEY_ALIAS: androidreleasekey
+          KEY_PASSWORD: android
         run: ./gradlew assembleRelease --no-daemon
 
       - name: Upload Release APK
         uses: actions/upload-artifact@v4
         with:
           name: PaddleOCR-App-release
-          path: app/build/outputs/apk/release/app-release-unsigned.apk
+          path: app/build/outputs/apk/release/app-release.apk
