@@ -4,7 +4,8 @@ import android.graphics.Bitmap
 import android.util.Log
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
-import com.google.mlkit.vision.text.chinese.ChineseTextRecognizer
+import com.google.mlkit.vision.text.TextRecognizer
+import com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 
@@ -12,7 +13,6 @@ import kotlin.coroutines.resume
  * Google ML Kit OCR 引擎
  *
  * 使用 ML Kit 中文文字识别，支持中英文混合识别。
- * 无需额外下载模型，开箱即用。
  */
 class MLKitEngine : OCRManager.OCREngineInterface {
 
@@ -20,12 +20,13 @@ class MLKitEngine : OCRManager.OCREngineInterface {
         private const val TAG = "MLKitEngine"
     }
 
-    private var recognizer: TextRecognition? = null
+    private var textRecognizer: TextRecognizer? = null
     private var isInitialized = false
 
     override fun initialize(): Boolean {
         return try {
-            recognizer = TextRecognition.getClient(ChineseTextRecognizerOptions.Builder().build())
+            val options = ChineseTextRecognizerOptions.Builder().build()
+            textRecognizer = TextRecognition.getClient(options)
             isInitialized = true
             Log.i(TAG, "ML Kit 中文识别引擎初始化成功")
             true
@@ -35,31 +36,17 @@ class MLKitEngine : OCRManager.OCREngineInterface {
         }
     }
 
-    override suspend fun recognize(bitmap: Bitmap): OCRResult {
-        if (!isInitialized || recognizer == null) {
+    override fun recognize(bitmap: Bitmap): OCRResult {
+        if (!isInitialized || textRecognizer == null) {
             return OCRResult.error("ML Kit 未初始化")
         }
 
         return try {
             val image = InputImage.fromBitmap(bitmap, 0)
-            val result = suspendCancellableCoroutine<com.google.mlkit.vision.text.Text> { cont ->
-                recognizer!!.process(image)
-                    .addOnSuccessListener { visionText ->
-                        cont.resume(visionText)
-                    }
-                    .addOnFailureListener { e ->
-                        Log.e(TAG, "ML Kit 识别失败", e)
-                        cont.resume(null)
-                    }
-            }
+            val visionText = textRecognizer!!.process(image).get()
 
-            if (result == null) {
-                return OCRResult.error("识别失败")
-            }
-
-            // 提取所有文本块
             val lines = mutableListOf<String>()
-            for (block in result.textBlocks) {
+            for (block in visionText.textBlocks) {
                 for (line in block.lines) {
                     val text = line.text.trim()
                     if (text.isNotEmpty()) {
@@ -70,13 +57,7 @@ class MLKitEngine : OCRManager.OCREngineInterface {
 
             val fullText = lines.joinToString("\n")
             if (fullText.isNotEmpty()) {
-                // ML Kit 没有直接的置信度，使用块级别置信度平均值
-                val confidence = if (result.textBlocks.isNotEmpty()) {
-                    result.textBlocks.mapNotNull { it.confidence?.toFloat() }.average().toFloat()
-                } else {
-                    0.8f // 默认置信度
-                }
-                OCRResult.success(fullText, confidence)
+                OCRResult.success(fullText, 0.9f)
             } else {
                 OCRResult.error("未识别到文字")
             }
@@ -87,8 +68,8 @@ class MLKitEngine : OCRManager.OCREngineInterface {
     }
 
     override fun release() {
-        recognizer?.close()
-        recognizer = null
+        textRecognizer?.close()
+        textRecognizer = null
         isInitialized = false
         Log.i(TAG, "ML Kit 资源已释放")
     }
