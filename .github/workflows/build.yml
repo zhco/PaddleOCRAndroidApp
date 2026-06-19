@@ -24,6 +24,10 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Install NDK and CMake
+        run: |
+          sdkmanager --install "ndk;21.4.7075529" "cmake;3.22.1"
+
       - name: Cache Gradle packages
         uses: actions/cache@v4
         with:
