@@ -121,9 +121,9 @@ class OCRManager(private val context: Context) {
     private fun createPaddleLiteEngine(): OCREngine? {
         return try {
             val modelDir = File(context.filesDir, MODEL_DIR)
-            val detModel = File(modelDir, "ch_ppocr_mobile_v2.0_det_slim_opt.nb")
-            val recModel = File(modelDir, "ch_ppocr_mobile_v2.0_rec_slim_opt.nb")
-            val clsModel = File(modelDir, "ch_ppocr_mobile_v2.0_cls_slim_opt.nb")
+            val detModel = File(modelDir, "ch_PP-OCRv4_mobile_det.nb")
+            val recModel = File(modelDir, "ch_PP-OCRv4_mobile_rec.nb")
+            val clsModel = File(modelDir, "ch_PP-OCRv4_mobile_cls.nb")
             val labelFile = File(modelDir, "ppocr_keys_v1.txt")
 
             // 检查所有模型文件是否存在
@@ -164,9 +164,9 @@ class OCRManager(private val context: Context) {
         if (!modelDir.exists()) modelDir.mkdirs()
 
         val files = listOf(
-            "ch_ppocr_mobile_v2.0_det_slim_opt.nb",
-            "ch_ppocr_mobile_v2.0_rec_slim_opt.nb",
-            "ch_ppocr_mobile_v2.0_cls_slim_opt.nb",
+            "ch_PP-OCRv4_mobile_det.nb",
+            "ch_PP-OCRv4_mobile_rec.nb",
+            "ch_PP-OCRv4_mobile_cls.nb",
             "ppocr_keys_v1.txt"
         )
 
