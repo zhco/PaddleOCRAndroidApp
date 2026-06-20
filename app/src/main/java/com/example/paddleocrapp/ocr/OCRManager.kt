@@ -148,7 +148,7 @@ class OCRManager(private val context: Context) {
 
             // 注意: OCREngine 需要 PaddleLitePredictor 的 native 方法
             // 当 .so 存在但 native 方法未注册时，这里会失败
-            // 这是预期的 - 我们会降级到 Tesseract
+            // 这是预期的 - 我们会降级到 ML Kit
             OCREngine(config)
         } catch (e: Exception) {
             Log.w(TAG, "创建 Paddle Lite 引擎失败: ${e.message}")

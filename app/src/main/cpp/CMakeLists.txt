@@ -4,6 +4,10 @@ project("ocr_jni")
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Use c++_shared STL so that libc++_shared.so is packaged into the APK.
+# Paddle Lite prebuilt library depends on libc++_shared.so.
+set(ANDROID_STL c++_shared)
+
 # Paddle Lite include directory
 set(PADDLE_LITE_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/include)
 
