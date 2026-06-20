@@ -86,9 +86,9 @@ object ImagePreprocessor {
             val g = (pixel shr 8) and 0xFF
             val b = pixel and 0xFF
 
-            val newR = ((r - mean) * factor + mean).coerceIn(0f, 255f).toInt()
-            val newG = ((g - mean) * factor + mean).coerceIn(0f, 255f).toInt()
-            val newB = ((b - mean) * factor + mean).coerceIn(0f, 255f).toInt()
+            val newR = ((r - mean) * factor + mean).coerceIn(0.0, 255.0).toInt()
+            val newG = ((g - mean) * factor + mean).coerceIn(0.0, 255.0).toInt()
+            val newB = ((b - mean) * factor + mean).coerceIn(0.0, 255.0).toInt()
 
             result[i] = Color.argb(
                 (pixel shr 24) and 0xFF,
@@ -308,8 +308,8 @@ object ImagePreprocessor {
         }
 
         val mean = (sum / count).toFloat()
-        val variance = (sumSq / count - mean * mean).coerceAtLeast(0f)
-        val std = Math.sqrt(variance.toDouble()).toFloat()
+        val variance = (sumSq / count - mean.toDouble() * mean.toDouble()).coerceAtLeast(0.0)
+        val std = Math.sqrt(variance).toFloat()
 
         return ImageStats(
             avgBrightness = mean,
