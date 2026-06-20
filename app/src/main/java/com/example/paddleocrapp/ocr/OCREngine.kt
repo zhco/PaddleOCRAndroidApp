@@ -147,8 +147,11 @@ class OCREngine(private val config: OCRConfig) : OCRManager.OCREngineInterface {
 
         Log.d(TAG, "开始识别图像: ${bitmap.width}x${bitmap.height}")
 
+        // Stage 0: 图像预处理增强
+        val preprocessedBitmap = ImagePreprocessor.autoPreprocess(bitmap)
+
         // Stage 1: 检测文本框
-        val boxes = detect(bitmap)
+        val boxes = detect(preprocessedBitmap)
         if (boxes.isEmpty()) {
             Log.d(TAG, "未检测到文本框")
             return OCRResult.success("", 0f, emptyList())
@@ -168,7 +171,7 @@ class OCREngine(private val config: OCRConfig) : OCRManager.OCREngineInterface {
             Log.d(TAG, "处理文本框 ${index + 1}/${sortedBoxes.size}")
 
             // 裁剪文本区域（使用透视变换）
-            var cropBitmap = cropFromBitmap(bitmap, box)
+            var cropBitmap = cropFromBitmap(preprocessedBitmap, box)
             if (cropBitmap == null) {
                 Log.w(TAG, "裁剪文本框失败，跳过")
                 continue
@@ -182,8 +185,10 @@ class OCREngine(private val config: OCRConfig) : OCRManager.OCREngineInterface {
             // 文本识别
             val (text, score) = recognizeText(cropBitmap)
             if (text.isNotEmpty()) {
-                textResults.add(Pair(text, score))
-                Log.d(TAG, "识别结果: \"$text\" (得分: ${"%.4f".format(score)})")
+                // 后处理纠错
+                val correctedText = TextPostProcessor.correctLine(text, score)
+                textResults.add(Pair(correctedText, score))
+                Log.d(TAG, "识别结果: \"$correctedText\" (得分: ${"%.4f".format(score)})")
             }
 
             // 释放裁剪的 bitmap
@@ -201,6 +206,12 @@ class OCREngine(private val config: OCRConfig) : OCRManager.OCREngineInterface {
         }
 
         Log.d(TAG, "识别完成，共 ${textResults.size} 行文本，平均得分: ${"%.4f".format(avgScore)}")
+
+        // 释放预处理的 bitmap
+        if (preprocessedBitmap !== bitmap) {
+            preprocessedBitmap.recycle()
+        }
+
         return OCRResult.success(fullText, avgScore, boxes)
     }
 
