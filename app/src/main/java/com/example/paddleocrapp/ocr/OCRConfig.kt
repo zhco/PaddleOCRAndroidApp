@@ -11,20 +11,20 @@ package com.example.paddleocrapp.ocr
  */
 data class OCRConfig(
     // ==================== 检测模型参数 ====================
-    /** 检测时图像长边最大长度，超过此值会等比缩放 */
-    val maxSideLen: Int = 960,
+    /** 检测时图像长边最大长度，超过此值会等比缩放。截屏/文档建议 1280-1600 */
+    val maxSideLen: Int = 1280,
 
-    /** DB 二值化阈值，用于从概率图生成二值文本区域图 */
-    val detDbThresh: Float = 0.3f,
+    /** DB 二值化阈值，用于从概率图生成二值文本区域图。降低可检测更多文字 */
+    val detDbThresh: Float = 0.25f,
 
-    /** DB 文本框阈值，过滤得分低于此阈值的文本框 */
-    val detDbBoxThresh: Float = 0.5f,
+    /** DB 文本框阈值，过滤得分低于此阈值的文本框。降低可减少漏检 */
+    val detDbBoxThresh: Float = 0.4f,
 
     /** DB 扩展系数（Vatti clipping 算法），用于扩展文本框使其更完整地包含文字 */
-    val detDbUnclipRatio: Float = 1.6f,
+    val detDbUnclipRatio: Float = 1.8f,
 
     /** 是否对二值化结果进行膨胀操作，可帮助连接断裂的文本 */
-    val detDbUseDilate: Boolean = false,
+    val detDbUseDilate: Boolean = true,
 
     // ==================== 方向分类器参数 ====================
     /** 是否启用方向分类器（判断文本是否需要旋转180度） */
