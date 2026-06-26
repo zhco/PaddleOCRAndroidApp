@@ -89,4 +89,39 @@ class MainViewModel : ViewModel() {
             moveItem(index, index + 1)
         }
     }
+
+    /**
+     * 更新图片的识别结果（从 TextResultActivity 返回）
+     */
+    fun updateRecognizedResults(updatedImages: List<ImageItem>) {
+        val current = _selectedImages.value.toMutableList()
+        for (updated in updatedImages) {
+            val index = current.indexOfFirst { it.uri == updated.uri }
+            if (index >= 0) {
+                current[index] = updated
+            }
+        }
+        _selectedImages.value = current
+    }
+
+    /**
+     * 获取已识别的图片数量
+     */
+    fun getRecognizedCount(): Int {
+        return _selectedImages.value.count { it.isRecognized }
+    }
+
+    /**
+     * 获取所有已识别图片按当前顺序排列
+     */
+    fun getRecognizedImagesInOrder(): List<ImageItem> {
+        return _selectedImages.value.filter { it.isRecognized }
+    }
+
+    /**
+     * 是否有已识别的结果可以导出
+     */
+    fun hasRecognizedResults(): Boolean {
+        return _selectedImages.value.any { it.isRecognized }
+    }
 }

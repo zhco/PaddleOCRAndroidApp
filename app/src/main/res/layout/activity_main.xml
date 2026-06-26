@@ -86,6 +86,17 @@
                 android:textColor="@color/text_secondary"
                 android:textSize="14sp" />
 
+            <!-- 导出全部结果按钮 -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnExportAll"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="导出全部结果"
+                android:textSize="13sp"
+                android:visibility="gone" />
+
             <ProgressBar
                 android:id="@+id/progressBar"
                 style="?android:attr/progressBarStyleHorizontal"

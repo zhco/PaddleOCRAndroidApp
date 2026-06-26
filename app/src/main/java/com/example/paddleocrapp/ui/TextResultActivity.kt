@@ -1,10 +1,12 @@
 package com.example.paddleocrapp.ui
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Lifecycle
@@ -52,8 +54,31 @@ class TextResultActivity : AppCompatActivity() {
         setupViewPager()
         setupButtons()
         observeViewModel()
+        setupBackPressHandler()
 
         viewModel.startRecognition(images)
+    }
+
+    private fun setupBackPressHandler() {
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                returnResults()
+                finish()
+            }
+        })
+    }
+
+    /**
+     * 将识别结果传回 MainActivity
+     */
+    private fun returnResults() {
+        val updatedImages = viewModel.getUpdatedImages()
+        if (updatedImages.isNotEmpty()) {
+            val intent = Intent().apply {
+                putParcelableArrayListExtra("updated_images", ArrayList(updatedImages))
+            }
+            setResult(RESULT_OK, intent)
+        }
     }
 
     private fun setupViewPager() {
@@ -156,6 +181,7 @@ class TextResultActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             android.R.id.home -> {
+                returnResults()
                 finish()
                 true
             }

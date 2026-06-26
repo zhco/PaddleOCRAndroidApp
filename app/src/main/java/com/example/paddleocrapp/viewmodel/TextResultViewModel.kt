@@ -83,6 +83,10 @@ class TextResultViewModel(application: Application) : AndroidViewModel(applicati
 
             bitmap.recycle()
 
+            // 更新 ImageItem 的识别结果
+            imageItem.recognizedText = text
+            imageItem.isRecognized = true
+
             PageData(
                 pageNumber = pageNumber,
                 imageItem = imageItem,
@@ -95,6 +99,16 @@ class TextResultViewModel(application: Application) : AndroidViewModel(applicati
                 textContent = "",
                 errorMessage = e.message
             )
+        }
+    }
+
+    /**
+     * 获取所有已识别图片的更新列表
+     */
+    fun getUpdatedImages(): List<ImageItem> {
+        return when (val state = _recognitionState.value) {
+            is RecognitionState.Success -> state.pages.map { it.imageItem }
+            else -> emptyList()
         }
     }
 

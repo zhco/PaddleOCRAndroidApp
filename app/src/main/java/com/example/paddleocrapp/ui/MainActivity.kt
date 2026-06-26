@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -17,7 +18,9 @@ import com.example.paddleocrapp.R
 import com.example.paddleocrapp.adapter.ImageGridAdapter
 import com.example.paddleocrapp.databinding.ActivityMainBinding
 import com.example.paddleocrapp.model.ImageItem
+import com.example.paddleocrapp.model.PageData
 import com.example.paddleocrapp.model.SortMode
+import com.example.paddleocrapp.utils.FileExporter
 import com.example.paddleocrapp.utils.ImagePicker
 import com.example.paddleocrapp.utils.PermissionHelper
 import com.example.paddleocrapp.viewmodel.MainViewModel
@@ -34,6 +37,22 @@ class MainActivity : AppCompatActivity() {
     private lateinit var imagePicker: ImagePicker
     private lateinit var permissionHelper: PermissionHelper
     private lateinit var imageAdapter: ImageGridAdapter
+
+    /**
+     * 接收 TextResultActivity 返回的识别结果
+     */
+    private val recognitionResultLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val updatedImages = result.data?.getParcelableArrayListExtra<ImageItem>("updated_images")
+            if (!updatedImages.isNullOrEmpty()) {
+                viewModel.updateRecognizedResults(updatedImages)
+                val count = viewModel.getRecognizedCount()
+                Toast.makeText(this, "已识别 $count 页，可导出全部结果", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -116,6 +135,11 @@ class MainActivity : AppCompatActivity() {
         binding.btnClear.setOnClickListener {
             showClearConfirmDialog()
         }
+
+        // 导出全部结果按钮
+        binding.btnExportAll.setOnClickListener {
+            exportAllResults()
+        }
     }
 
     private fun observeViewModel() {
@@ -140,8 +164,18 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateUIState(images: List<ImageItem>) {
         val count = images.size
+        val recognizedCount = viewModel.getRecognizedCount()
+
         binding.tvImageCount.text = getString(R.string.image_count, count)
         binding.btnStartRecognition.isEnabled = count > 0
+
+        // 控制导出按钮的可见性：有识别结果时显示
+        binding.btnExportAll.visibility = if (recognizedCount > 0) View.VISIBLE else View.GONE
+
+        // 更新导出按钮文字
+        if (recognizedCount > 0) {
+            binding.btnExportAll.text = "导出全部结果 ($recognizedCount 页)"
+        }
 
         if (count == 0) {
             binding.emptyView.visibility = View.VISIBLE
@@ -168,7 +202,40 @@ class MainActivity : AppCompatActivity() {
         val intent = Intent(this, TextResultActivity::class.java).apply {
             putParcelableArrayListExtra("images", ArrayList(viewModel.selectedImages.value))
         }
-        startActivity(intent)
+        recognitionResultLauncher.launch(intent)
+    }
+
+    /**
+     * 导出全部识别结果为一个 txt 文件
+     */
+    private fun exportAllResults() {
+        val recognizedImages = viewModel.getRecognizedImagesInOrder()
+        if (recognizedImages.isEmpty()) {
+            Toast.makeText(this, "没有可导出的识别结果", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // 构建 PageData 列表
+        val pages = recognizedImages.mapIndexed { index, imageItem ->
+            PageData(
+                pageNumber = index + 1,
+                imageItem = imageItem,
+                textContent = imageItem.recognizedText ?: ""
+            )
+        }
+
+        lifecycleScope.launch {
+            val uri = FileExporter.exportToText(this@MainActivity, pages, includePageHeader = true)
+            if (uri != null) {
+                Toast.makeText(
+                    this@MainActivity,
+                    "已保存到下载文件夹（共 ${pages.size} 页）",
+                    Toast.LENGTH_LONG
+                ).show()
+            } else {
+                Toast.makeText(this@MainActivity, "保存失败", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     private fun showSortOptions() {
